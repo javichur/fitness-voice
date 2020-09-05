@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="AI voice-controlled trainer in your browser">
+  <meta name="author" content="Javier Campos">
+  <title>🎙️ Fitness Voice</title>
+
+  <link href="./assets/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+  <link href="./assets/style.css" rel="stylesheet">
+
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"
+    integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+  <script src="./assets/bootstrap.bundle.min.js"
+    integrity="sha384-LtrjvnR4Twt/qOuYxE721u19sVFLVSA4hf/rRt6PrZTmiPltdZcI7q7PXQBYTKyf"
+    crossorigin="anonymous"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands@0.4.0/dist/speech-commands.min.js"></script>
+
+  <script src="./assets/scripts.js"></script>
+</head>
+
+<body onload="init();">
+  <header>
+    <div class="bg-dark collapse" id="navbarHeader">
+      <div class="container">
+        <div class="row">
+          <div class="col-sm-8 col-md-7 py-4">
+            <h4 class="text-white">About</h4>
+            <p class="text-muted">Add some information about the album below, the author, or any other background
+              context. Make it a few sentences long so folks can pick up some informative tidbits. Then, link them off
+              to some social networking sites or contact information.</p>
+          </div>
+          <div class="col-sm-4 offset-md-1 py-4">
+            <h4 class="text-white">Contact</h4>
+            <ul class="list-unstyled">
+              <li><a href="#" class="text-white">Follow on Twitter</a>
+              </li>
+              <li><a href="#" class="text-white">Like on Facebook</a>
+              </li>
+              <li><a href="https://getbootstrap.com/docs/4.5/examples/album/#" class="text-white">Email me</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="navbar navbar-dark bg-dark shadow-sm">
+      <div class="container d-flex justify-content-between">
+        <a href="/" class="navbar-brand d-flex align-items-center">
+          <strong>🎙️ Fitness Voice</strong>
+        </a>
+        <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navbarHeader"
+          aria-controls="navbarHeader" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main role="main" class="page-holder bg-cover">
+
+    <section class="jumbotron text-center"
+      style="position: relative; background-color: transparent; padding-bottom: 0px; padding-top: 50px;">
+      <div class="container" style="">
+        <h1 style="color:black;">AI voice-controlled trainer in your browser</h1>
+        <p class="lead text-muted" style="color:#333333 !important;">Just say: "Coach, I want to train surfing"</p>
+        <p>
+          <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+          <lottie-player id="lottiemic" src="./assets/mic1.json" background="transparent" speed="1"
+            style="margin-top: -500px; width: 100%; height: 100%;" loop autoplay
+            onclick="showGenericModal('No tap needed :) . Just say \'Coach, I want to train yoga\'')"></lottie-player>
+        </p>
+      </div>
+    </section>
+
+    <div class="album py-5 bg-light" style="background-color: transparent !important; padding-top: 0px !important;">
+      <div class="container" style="background-color: transparent;">
+
+        <div class="row">
+          <div class="col-md-4">
+            <div class="card mb-4 shadow-sm">
+              <img style="width: 100%;" src="./assets/gym.jpg" />
+              <div class="card-body">
+                <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                <div class="d-flex justify-content-between align-items-center">
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                  </div>
+                  <small class="text-muted">9 mins</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card mb-4 shadow-sm">
+              <img style="width: 100%;" src="./assets/surf1.jpg" />
+              <div class="card-body">
+                <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua..</p>
+                <div class="d-flex justify-content-between align-items-center">
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                  </div>
+                  <small class="text-muted">9 mins</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card mb-4 shadow-sm">
+              <img style="width: 100%;" src="./assets/yoga1.jpg" />
+              <div class="card-body">
+                <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                <div class="d-flex justify-content-between align-items-center">
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                  </div>
+                  <small class="text-muted">9 mins</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-muted" style="position: relative;">
+    <div class="container">
+      <p class="float-right">
+        <!-- <a href="#">Back to home</a> -->
+      </p>
+      <p>Fitness Voice is a <a href="https://javiercampos.es" target="_blank">Javier Campos</a> project.
+        Powered by <a href="https://wit.ai" target="_blank">Wit.ai</a>, TensorFlow.</p>
+      <p></p>
+    </div>
+  </footer>
+
+  <!-- Modals -->
+  <div id="genericModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="genericModalTitle"></h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div id="genericModalTxt" class="modal-body"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-dark" data-dismiss="modal">Lets go!</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="helpModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLongTitle">Welcome to Fitness Voice!</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>🔒 We take privacy very seriously:</p>
+          <p>🔇 This web is controlled by voice BUT we only process your words online if you have first said the wake
+            word "coach".</p>
+          <p>🔮 The wake-word "coach" (hotword) is detected offline thanks to Tensorflow libray.</p>
+          <p>👯 During exercises, we detect your body posture offline. Webcam images don't go to the Internet.</p>
+          <p>👩‍🎤 The coach's voices are not really famous people, they have been created with Artificial Intelligence.
+          </p>
+          <p>👋 Hands-free web thanks to <a href="https://wit.ai" target="_blank">wit.ai</a>, <b>you don't need to press
+              any buttons, just start talking</b>.</p>
+        </div>
+        <div class="modal-footer">
+          <i>Say 'Coach, lets go!'</i> <button type="button" class="btn btn-dark" data-dismiss="modal"> Lets
+            go!</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
