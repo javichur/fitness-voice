@@ -2,6 +2,7 @@
 // Created by javiercampos.es
 // 2020-09-04
 
+// wit + voice variables
 const URL_BASE = 'http://localhost:5500/';
 const URL_MODEL = URL_BASE + "assets/coach-audio-model/";
 const HOTWORD = 'coach';
@@ -17,6 +18,13 @@ var synth = window.speechSynthesis;
 var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition;
 var SpeechGrammarList = SpeechGrammarList || webkitSpeechGrammarList;
 var SpeechRecognitionEvent = SpeechRecognitionEvent || webkitSpeechRecognitionEvent;
+
+
+// pose variables
+const URL_POSE_MODEL = "./my_model_pose/";
+let pose_model, webcam, ctx, labelContainer, maxPredictions;
+const minPartConfidence = 0.4;
+
 
 async function createModel() {
   const checkpointURL = URL_MODEL + "model.json"; // model topology
@@ -110,7 +118,7 @@ function witResponseHander(result) {
       const sport = result.entities['sport:sport'][0].body;
       switch (sport) {
         case 'surfing':
-          speak('Great, I like surfing!');
+          speak('Great, I like surfing! In this exercise, stand in front of the camera and move the 2 arms on each side of your body, up and down.');
           goTo('surfing');
           break;
         case 'yoga':
@@ -129,6 +137,11 @@ function witResponseHander(result) {
     case 'help':
       speak('Ok, I show you information about Fitness Voice.');
       $("#helpModal").modal();
+      ding();
+      break;
+    case 'gohome':
+      speak('Ok, going back to the home.');
+      goTo('home');
       break;
     case 'repeat':
       // TODO
@@ -136,10 +149,41 @@ function witResponseHander(result) {
   }
 }
 
-function goTo(page) {
-  switch(page) {
+function ding() {
+  var audio = new Audio('./assets/ding.mp3');
+  audio.play();
+}
+
+function applause() {
+  var audio = new Audio('./assets/cheer.mp3');
+  audio.play();
+}
+
+async function goTo(page) {
+  switch (page) {
     case 'surfing':
+      currentTraining = 'surfing';
       $('#albums').hide();
+      $('#titleH1').hide();
+      $('#divTraining').show();
+      document.querySelector('#lblSampleUtterance').textContent = '"Coach, I want to change trainer voice"';
+      initPose();
+      break;
+    case 'home':
+      currentTraining = null;
+
+      if (webcam) {
+        await webcam.stop();
+      }
+
+      $('#albums').show();
+      $('#titleH1').show();
+      $('#divTraining').hide();
+
+      init();
+      $('#helpModal').hide();
+
+      document.querySelector('#lblSampleUtterance').textContent = '"Coach, I want to train yoga"';
       break;
   }
 }
@@ -182,7 +226,8 @@ function micAnimationPlay() {
 
 async function init() {
   micAnimationPause();
-  $("#helpModal").modal();
+  $('#helpModal').modal();
+  $('#divTraining').hide();
 
   currentVoice = selectVoice(LANG);
 
@@ -276,4 +321,299 @@ function testSpeech() {
     //Fired when the speech recognition service has begun listening to incoming audio with intent to recognize grammars associated with the current SpeechRecognition.
     console.log('SpeechRecognition.onstart');
   }
+}
+
+// pose methods:
+const nose = 0;
+const leftEye = 1;
+const rightEye = 2;
+const leftEar = 3;
+const rightEar = 4;
+const leftShoulder = 5;
+const rightShoulder = 6;
+const leftElbow = 7;
+const rightElbow = 8;
+const leftWrist = 9;
+const rightWrist = 10;
+const leftHip = 11;
+const rightHip = 12;
+const leftKnee = 13;
+const rightKnee = 14;
+const leftAnkle = 15;
+const rightAnkle = 16;
+
+let currentPose = null; // null | gymDown | gymUp |
+let currentTraining = null; // null | gym | surfing | yoga
+let postureCounter = 0;
+
+async function initPose() {
+
+  postureCounter = 0;
+  document.querySelector('#lblCounter').textContent = postureCounter;
+
+  const modelURL = URL_POSE_MODEL + "model.json";
+  const metadataURL = URL_POSE_MODEL + "metadata.json";
+
+  // load the model and metadata
+  // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
+  // Note: the pose library adds a tmPose object to your window (window.tmPose)
+  pose_model = await tmPose.load(modelURL, metadataURL);
+  maxPredictions = pose_model.getTotalClasses();
+
+  // Convenience function to setup a webcam
+  const size_html = 600;
+  const size_model = 600;
+  webcam = new tmPose.Webcam(size_model, size_model, true); // width, height, flip
+  await webcam.setup(); // request access to the webcam
+  await webcam.play();
+  window.requestAnimationFrame(loop);
+
+  // append/get elements to the DOM
+  const canvas = document.getElementById("canvas");
+  canvas.width = size_html;
+  canvas.height = size_html;
+  ctx = canvas.getContext("2d");
+  // labelContainer = document.getElementById("label-container");
+  // for (let i = 0; i < maxPredictions; i++) { // and class labels
+  //   labelContainer.appendChild(document.createElement("div"));
+  // }
+}
+
+async function loop(timestamp) {
+  webcam.update(); // update the webcam frame
+  await predictPose();
+  window.requestAnimationFrame(loop);
+}
+
+async function predictPose() {
+  // Prediction #1: run input through posenet
+  // estimatePose can take in an image, video or canvas html element
+  const { pose, posenetOutput } = await pose_model.estimatePose(webcam.canvas);
+  // Prediction 2: run input through teachable machine classification model
+  // const prediction = await pose_model.predict(posenetOutput);
+
+  // for (let i = 0; i < maxPredictions; i++) {
+  //   const classPrediction =
+  //     prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+  //   labelContainer.childNodes[i].innerHTML = classPrediction;
+  // }
+
+  manualPosePrediction(pose);
+
+
+  drawPose(pose);
+}
+
+function manualPosePrediction(pose) {
+  if (currentTraining == 'surfing') {
+    if (currentPose != 'gymUp') {
+      if (isGymUp(pose)) {
+        document.querySelector('#lblPosture').textContent = 'Move your arms down';
+        ding();
+        currentPose = 'gymUp';
+        postureCounter += 1;
+        document.querySelector('#lblCounter').textContent = postureCounter;
+
+        motivationInProgress(postureCounter);
+      }
+    } else if (currentPose != 'gymDown') {
+      if (isGymDown(pose)) {
+        document.querySelector('#lblPosture').textContent = 'Move your arms up';
+        ding();
+        currentPose = 'gymDown';
+        postureCounter += 1;
+        document.querySelector('#lblCounter').textContent = postureCounter;
+
+        motivationInProgress(postureCounter);
+      }
+    }
+  }
+}
+
+function motivationInProgress(counter) {
+  if (counter == 10) {
+    speak('Perfect, you are improving your six pack. Look it! Continues until 20 repetitions.');
+  } else if (counter == 5 || counter == 15) {
+    speak('cheer up!');
+  } else if (counter == 20) {
+    applause();
+    goTo('home');
+  }
+}
+
+function isGymUp(pose) {
+  if (pose.keypoints[leftElbow].score >= minPartConfidence &&
+    pose.keypoints[leftShoulder].score >= minPartConfidence &&
+    pose.keypoints[leftWrist].score >= minPartConfidence &&
+    pose.keypoints[rightElbow].score >= minPartConfidence &&
+    pose.keypoints[rightShoulder].score >= minPartConfidence &&
+    pose.keypoints[rightElbow].score >= minPartConfidence &&
+    pose.keypoints[leftElbow].position.y <= pose.keypoints[leftShoulder].position.y &&
+    pose.keypoints[leftWrist].position.y <= pose.keypoints[leftElbow].position.y &&
+    pose.keypoints[rightElbow].position.y <= pose.keypoints[rightShoulder].position.y &&
+    pose.keypoints[rightWrist].position.y <= pose.keypoints[rightElbow].position.y)
+    return true;
+  return false;
+}
+
+function isGymDown(pose) {
+  if (pose.keypoints[leftElbow].score >= minPartConfidence &&
+    pose.keypoints[leftShoulder].score >= minPartConfidence &&
+    pose.keypoints[leftWrist].score >= minPartConfidence &&
+    pose.keypoints[rightElbow].score >= minPartConfidence &&
+    pose.keypoints[rightShoulder].score >= minPartConfidence &&
+    pose.keypoints[rightElbow].score >= minPartConfidence &&
+    pose.keypoints[leftHip].position.y <= pose.keypoints[leftWrist].position.y &&
+    pose.keypoints[rightHip].position.y <= pose.keypoints[rightWrist].position.y)
+    return true;
+  return false;
+}
+
+function drawPose(pose) {
+  if (webcam.canvas) {
+    ctx.drawImage(webcam.canvas, 0, 0);
+    const canvas = document.getElementById("canvas");
+    // ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // ctx.fillStyle = 'white';
+    //ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // draw the keypoints and skeleton
+    if (pose) {
+      myDrawSkeleton(pose);
+      myDrawKeyPoints(pose);
+    }
+  }
+}
+
+function myDrawKeyPoints(pose) {
+  // tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
+  for (let j = 0; j < pose.keypoints.length; j++) {
+    let keypoint = pose.keypoints[j];
+    if (keypoint.score >= minPartConfidence) {
+      drawPoint(keypoint.position, 'orange');
+    }
+  }
+}
+
+function myDrawSkeleton(pose) {
+
+  // head size (aprox)
+  var a = pose.keypoints[nose].position.x - pose.keypoints[leftEye].position.x;
+  var b = pose.keypoints[nose].position.y - pose.keypoints[leftEye].position.y;
+  var c = Math.sqrt(a * a + b * b) * 2;
+
+  var circle = new Path2D();
+  circle.arc(pose.keypoints[nose].position.x, pose.keypoints[nose].position.y, c, 0, 2 * Math.PI);
+  ctx.fillStyle = 'pink';
+  ctx.fill(circle);
+
+  drawLineFromKeypoints(pose.keypoints, leftShoulder, rightShoulder, '#2196F3');
+  drawLineFromKeypoints(pose.keypoints, leftShoulder, leftHip, '#2196F3');
+  drawLineFromKeypoints(pose.keypoints, rightShoulder, rightHip, '#2196F3');
+  drawLineFromKeypoints(pose.keypoints, leftHip, rightHip, '#2196F3');
+
+  drawLineFromKeypoints(pose.keypoints, leftShoulder, leftElbow, 'red');
+  drawLineFromKeypoints(pose.keypoints, leftElbow, leftWrist, 'red');
+
+  drawLineFromKeypoints(pose.keypoints, rightShoulder, rightElbow, 'red');
+  drawLineFromKeypoints(pose.keypoints, rightElbow, rightWrist, 'red');
+
+  drawLineFromKeypoints(pose.keypoints, leftHip, leftKnee, 'green');
+  drawLineFromKeypoints(pose.keypoints, leftKnee, leftAnkle, 'green');
+
+  drawLineFromKeypoints(pose.keypoints, rightHip, rightKnee, 'green');
+  drawLineFromKeypoints(pose.keypoints, rightKnee, rightAnkle, 'green');
+
+  if (postureCounter >= 10) {
+    drawSixPack(pose.keypoints);
+  }
+}
+
+function drawPoint(p, color) {
+  var circle = new Path2D();
+  circle.arc(p.x, p.y, 10, 0, 2 * Math.PI);
+  ctx.fillStyle = color;
+  ctx.fill(circle);
+}
+
+function drawLineFromKeypoints(keypoints, a, b, color) {
+  if (keypoints[a].score >= minPartConfidence && keypoints[b].score >= minPartConfidence) {
+    drawLineFromXY(keypoints[a].position, keypoints[b].position, color);
+  }
+}
+
+function drawLineFromXY(a, b, color) {
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = color;
+  ctx.stroke();
+}
+
+function drawSixPack(keypoints) {
+  const w = {
+    x: keypoints[rightHip].position.x - keypoints[leftHip].position.x,
+    y: keypoints[rightHip].position.y - keypoints[leftHip].position.y,
+  }
+
+  const height = {
+    x: keypoints[leftShoulder].position.x - keypoints[leftHip].position.x,
+    y: keypoints[leftShoulder].position.y - keypoints[leftHip].position.y,
+  }
+
+  const a = {
+    x: keypoints[leftHip].position.x + (w.x / 4),
+    y: keypoints[leftHip].position.y + (w.y / 4),
+  };
+
+  const b = {
+    x: keypoints[leftHip].position.x + (w.x / 4) * 3,
+    y: keypoints[leftHip].position.y + (w.y / 4) * 3,
+  };
+
+  const c = {
+    x: a.x + (height.x / 2),
+    y: a.y + (height.y / 2),
+  };
+
+  const d = {
+    x: b.x + (height.x / 2),
+    y: b.y + (height.y / 2),
+  };
+
+  const e = {
+    x: a.x + (b.x - a.x) / 2,
+    y: a.y + (b.y - a.y) / 2,
+  };
+  const f = {
+    x: c.x + (d.x - c.x) / 2,
+    y: c.y + (d.y - c.y) / 2,
+  };
+
+  const g = {
+    x: a.x + (c.x - a.x) / 3,
+    y: a.y + (c.y - a.y) / 3,
+  };
+  const h = {
+    x: b.x + (d.x - b.x) / 3,
+    y: b.y + (d.y - b.y) / 3,
+  };
+
+  const i = {
+    x: a.x + ((c.x - a.x) / 3) * 2,
+    y: a.y + ((c.y - a.y) / 3) * 2,
+  };
+  const j = {
+    x: b.x + ((d.x - b.x) / 3) * 2,
+    y: b.y + ((d.y - b.y) / 3) * 2,
+  };
+
+  drawLineFromXY(a, c, 'red');
+  drawLineFromXY(b, d, 'red');
+  drawLineFromXY(c, d, 'red');
+
+  drawLineFromXY(e, f, 'red');
+  drawLineFromXY(g, h, 'red');
+  drawLineFromXY(i, j, 'red');
 }

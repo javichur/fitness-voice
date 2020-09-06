@@ -19,6 +19,7 @@
     crossorigin="anonymous"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
   <script
     src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands@0.4.0/dist/speech-commands.min.js"></script>
 
@@ -26,7 +27,7 @@
 </head>
 
 <body onload="init();">
-  <header>
+  <header style="position:relative;">
     <div class="bg-dark collapse" id="navbarHeader">
       <div class="container">
         <div class="row">
@@ -67,8 +68,8 @@
     <section class="jumbotron text-center"
       style="position: relative; background-color: transparent; padding-bottom: 0px; padding-top: 50px;">
       <div class="container" style="">
-        <h1 style="color:black;">AI voice-controlled trainer in your browser</h1>
-        <p class="lead text-muted" style="color:#333333 !important;">Just say: "Coach, I want to train surfing"</p>
+        <h1 id="titleH1" style="color:black;">AI voice-controlled trainer in your browser</h1>
+        <p class="lead text-muted" style="color:#333333 !important;">Just say: <label id="lblSampleUtterance">"Coach, I want to train surfing"</label></p>
         <p>
           <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
           <lottie-player id="lottiemic" src="./assets/mic1.json" background="transparent" speed="1"
@@ -77,6 +78,14 @@
         </p>
       </div>
     </section>
+
+    <div id="divTraining" style="position:relative; height: 600px; margin-top: -80px;">
+      <canvas id="canvas"></canvas>
+      <div style="float: right; text-align: center; width: 50%;">
+        <label id="lblPosture"></label><br />
+        <label id="lblCounter" style="font-size: 200px;"></label>
+      </div>
+    </div>
 
     <div id="albums" class="album py-5 bg-light" style="background-color: transparent !important; padding-top: 0px !important;">
       <div class="container" style="background-color: transparent;">
@@ -89,8 +98,7 @@
                 <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
                 <div class="d-flex justify-content-between align-items-center">
                   <div class="btn-group">
-                    <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showGenericModal('Use your voice to select an exercise :)')">Don't click here</button>
                   </div>
                   <small class="text-muted">9 mins</small>
                 </div>
@@ -101,13 +109,12 @@
             <div class="card mb-4 shadow-sm">
               <img style="width: 100%;" src="./assets/surf1.jpg" />
               <div class="card-body">
-                <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua..</p>
+                <p class="card-text">Arm exercises for surfers. Improve the strength of your arms and abs. Look at the results!</p>
                 <div class="d-flex justify-content-between align-items-center">
                   <div class="btn-group">
-                    <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showGenericModal('Use your voice to select an exercise :)')">Don't click here</button>
                   </div>
-                  <small class="text-muted">9 mins</small>
+                  <small class="text-muted">20 reps</small>
                 </div>
               </div>
             </div>
@@ -119,8 +126,7 @@
                 <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
                 <div class="d-flex justify-content-between align-items-center">
                   <div class="btn-group">
-                    <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showGenericModal('Use your voice to select an exercise :)')">Don't click here</button>
                   </div>
                   <small class="text-muted">9 mins</small>
                 </div>
@@ -138,7 +144,7 @@
         <!-- <a href="#">Back to home</a> -->
       </p>
       <p>Fitness Voice is a <a href="https://javiercampos.es" target="_blank">Javier Campos</a> project.
-        Powered by <a href="https://wit.ai" target="_blank">Wit.ai</a>, TensorFlow.</p>
+        Powered by <a href="https://wit.ai" target="_blank">Wit.ai</a>, TensorFlow. Sound effects by <a href="https://www.zapsplat.com/" target="_blank">zapsplat</a>.</p>
       <p></p>
     </div>
   </footer>
