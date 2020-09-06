@@ -8,6 +8,8 @@ const HOTWORD = 'coach';
 const HOTWORD_ACCURACY = 0.70;
 const LANG = 'en-US';
 const WIT_TOKEN = '<MY TOKEN HERE :)>';
+const WIT_VERSION = '20200902';
+const WIT_ACCURACY = 0.7;
 let currentVoice = null;
 let recognizer;
 var synth = window.speechSynthesis;
@@ -63,11 +65,13 @@ function speak(msg) {
     utterThis.rate = 1;
 
     synth.speak(utterThis);
+  }
+}
 
-
-    // TODO: debug
+function witRequest(msg) {
+  if (msg !== '') {
     $.ajax({
-      url: 'https://api.wit.ai/message?v=20200902&q=' + msg,
+      url: `https://api.wit.ai/message?v=${WIT_VERSION}&q=${msg}`,
       type: 'GET',
       contentType: 'application/json',
       headers: {
@@ -75,12 +79,68 @@ function speak(msg) {
       },
       success: function (result) {
         // CallBack(result);
-        alert('hello world' + JSON.stringify(result));
+        // alert('hello world' + JSON.stringify(result));
+        witResponseHander(result);
       },
       error: function (error) {
         alert('error' + JSON.stringify(error));
       }
     });
+  }
+}
+
+function witResponseHander(result) {
+  if (!result || !result.intents || !result.intents[0] || result.intents[0].confidence < WIT_ACCURACY) {
+    speak('I\'m sorry, I can\'t understand. Repeat please.');
+    return; // no result
+  }
+
+  const intent = result.intents[0];
+  switch (intent.name) {
+    case 'letsgo':
+      speak('OK, Lets go! Tell me something like "Coach, I want to traing surfing".');
+      $("#helpModal").modal('hide');
+      $("#genericModal").modal('hide');
+      break;
+    case 'set_training':
+      if (!result.entities || !result.entities['sport:sport'] || !result.entities['sport:sport'][0]) {
+        speak('I\'m sorry, I can\'t understand the sport. Repeat please.');
+        return;
+      }
+      const sport = result.entities['sport:sport'][0].body;
+      switch (sport) {
+        case 'surfing':
+          speak('Great, I like surfing!');
+          goTo('surfing');
+          break;
+        case 'yoga':
+          speak('Nice, I like yoga!');
+          goTo('yoga');
+          break;
+        case 'gym':
+          speak('Good choice, let\'s go to the gym!');
+          goTo('gym');
+          break;
+        default:
+          speak('I\'m sorry, I can\'t understand the sport. Repeat please.');
+          break;
+      }
+      break;
+    case 'help':
+      speak('Ok, I show you information about Fitness Voice.');
+      $("#helpModal").modal();
+      break;
+    case 'repeat':
+      // TODO
+      break;
+  }
+}
+
+function goTo(page) {
+  switch(page) {
+    case 'surfing':
+      $('#albums').hide();
+      break;
   }
 }
 
@@ -92,13 +152,11 @@ function listenHotwordOffline() {
     const classLabels = recognizer.wordLabels();
     for (let i = 0; i < classLabels.length; i++) {
       if (classLabels[i] == HOTWORD && result.scores[i].toFixed(2) >= HOTWORD_ACCURACY) {
-        const classPrediction = classLabels[i] + ": " + result.scores[i].toFixed(2);
-
-        document.querySelector('#lottiemic').play();
+        // const classPrediction = classLabels[i] + ": " + result.scores[i].toFixed(2);
+        micAnimationPlay();
 
         recognizer.stopListening();
         testSpeech();
-
         break;
       }
     }
@@ -114,6 +172,12 @@ function micAnimationPause() {
   const m = document.querySelector('#lottiemic');
   m.pause();
   m.seek('50%');
+  $("#micInHelpModal").hide();
+}
+
+function micAnimationPlay() {
+  document.querySelector('#lottiemic').play();
+  $("#micInHelpModal").show();
 }
 
 async function init() {
@@ -156,8 +220,9 @@ function testSpeech() {
     // The second [0] returns the SpeechRecognitionAlternative at position 0.
     // We then return the transcript property of the SpeechRecognitionAlternative object 
     var speechResult = event.results[0][0].transcript.toLowerCase();
-    showGenericModal('Speech received: ' + speechResult);
-    speak(speechResult);
+    // showGenericModal('Speech received: ' + speechResult);
+    // speak(speechResult);
+    witRequest(speechResult);
 
     console.log('Confidence: ' + event.results[0][0].confidence);
 
