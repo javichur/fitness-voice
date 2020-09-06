@@ -143,6 +143,9 @@ function witResponseHander(result) {
       speak('Ok, going back to the home.');
       goTo('home');
       break;
+    case 'stats':
+      getStats();
+      break;
     case 'repeat':
       // TODO
       break;
@@ -238,6 +241,35 @@ function micAnimationPlay() {
   document.querySelector('#lottiemic').play();
   $("#micInHelpModal").show();
 }
+
+function getStats() {
+  let ret = '';
+  if (typeof (Storage) !== "undefined") {
+    let gym = localStorage.getItem("total_gym");
+    if(!gym) gym = 0;
+
+    let surf = localStorage.getItem("total_surfing");
+    if(!surf) surf = 0;
+
+    ret = 'Your gym stats: ' + gym + ' moves. Surfing stats: ' + surf + ' moves.'
+  } else {
+    ret = 'Your statistics are not available. You must give the browser permission to store information.';
+  }
+
+  speak(ret);
+}
+
+function updateStatsGym(num) {
+  var cont = localStorage.getItem("total_gym");
+  if (!cont) cont = '0';
+  localStorage.setItem("total_gym", parseInt(cont) + num);
+}
+function updateStatsSurfing(num) {
+  var cont = localStorage.getItem("total_surfing");
+  if (!cont) cont = '0';
+  localStorage.setItem("total_surfing", parseInt(cont) + num);
+}
+
 
 async function init() {
   micAnimationPause();
@@ -436,6 +468,7 @@ function manualPosePrediction(pose) {
           document.querySelector('#lblCounter').textContent = postureCounter;
 
           motivationInProgress(postureCounter);
+          updateStatsSurfing(1);
         }
       } else if (currentPose != 'gymDown') {
         if (isGymDown(pose)) {
@@ -446,6 +479,7 @@ function manualPosePrediction(pose) {
           document.querySelector('#lblCounter').textContent = postureCounter;
 
           motivationInProgress(postureCounter);
+          updateStatsSurfing(1);
         }
       }
     } else if (currentTraining == 'gym') {
@@ -458,6 +492,7 @@ function manualPosePrediction(pose) {
           document.querySelector('#lblCounter').textContent = postureCounter;
 
           motivationInProgress(postureCounter);
+          updateStatsGym(1);
         }
       } else if (currentPose != 'liftweightsDown') {
         if (isWeightsDown(pose)) {
@@ -468,6 +503,7 @@ function manualPosePrediction(pose) {
           document.querySelector('#lblCounter').textContent = postureCounter;
 
           motivationInProgress(postureCounter);
+          updateStatsGym(1);
         }
       }
     }
