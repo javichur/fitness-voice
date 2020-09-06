@@ -6,13 +6,13 @@
 const URL_BASE = 'http://localhost:5500/';
 const URL_MODEL = URL_BASE + "assets/coach-audio-model/";
 const HOTWORD = 'coach';
-const HOTWORD_ACCURACY = 0.70;
+const HOTWORD_ACCURACY = 0.65;
 const LANG = 'en-US';
 const WIT_TOKEN = '<MY TOKEN HERE :)>';
 const WIT_VERSION = '20200902';
 const WIT_ACCURACY = 0.7;
 let currentVoice = null;
-let recognizer;
+let recognizer = null;
 var synth = window.speechSynthesis;
 
 var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition;
@@ -126,7 +126,7 @@ function witResponseHander(result) {
           goTo('yoga');
           break;
         case 'gym':
-          speak('Good choice, let\'s go to the gym!');
+          speak('Good choice, let\'s go to the gym! In this exercise, stand on your side, and move a barbell up and down with both arms.');
           goTo('gym');
           break;
         default:
@@ -169,6 +169,15 @@ async function goTo(page) {
       document.querySelector('#lblSampleUtterance').textContent = '"Coach, I want to change trainer voice"';
       initPose();
       break;
+
+    case 'gym':
+      currentTraining = 'gym';
+      $('#albums').hide();
+      $('#titleH1').hide();
+      $('#divTraining').show();
+      document.querySelector('#lblSampleUtterance').textContent = '"Coach, I want to change trainer voice"';
+      initPose();
+      break;
     case 'home':
       currentTraining = null;
 
@@ -180,7 +189,7 @@ async function goTo(page) {
       $('#titleH1').show();
       $('#divTraining').hide();
 
-      init();
+      await init();
       $('#helpModal').hide();
 
       document.querySelector('#lblSampleUtterance').textContent = '"Coach, I want to train yoga"';
@@ -191,25 +200,31 @@ async function goTo(page) {
 function listenHotwordOffline() {
   micAnimationPause();
 
-  recognizer.listen(result => {
-    const scores = result.scores; // probability of prediction for each class
-    const classLabels = recognizer.wordLabels();
-    for (let i = 0; i < classLabels.length; i++) {
-      if (classLabels[i] == HOTWORD && result.scores[i].toFixed(2) >= HOTWORD_ACCURACY) {
-        // const classPrediction = classLabels[i] + ": " + result.scores[i].toFixed(2);
-        micAnimationPlay();
+  if (!recognizer.isListening()) {
+    recognizer.listen(result => {
+      const scores = result.scores; // probability of prediction for each class
+      const classLabels = recognizer.wordLabels();
+      for (let i = 0; i < classLabels.length; i++) {
+        if (classLabels[i] == HOTWORD && result.scores[i].toFixed(2) >= HOTWORD_ACCURACY) {
+          // const classPrediction = classLabels[i] + ": " + result.scores[i].toFixed(2);
+          micAnimationPlay();
 
-        recognizer.stopListening();
-        testSpeech();
-        break;
+          try {
+            recognizer.stopListening();
+          } catch (error) {
+            console.log('error stopping: ' + JSON.stringify(erro));
+          }
+          testSpeech();
+          break;
+        }
       }
-    }
-  }, {
-    includeSpectrogram: true, // in case listen should return result.spectrogram
-    probabilityThreshold: 0.75,
-    invokeCallbackOnNoiseAndUnknown: true,
-    overlapFactor: 0.50 // probably want between 0.5 and 0.75. More info in README
-  });
+    }, {
+      includeSpectrogram: true,
+      probabilityThreshold: HOTWORD_ACCURACY,
+      invokeCallbackOnNoiseAndUnknown: false,
+      overlapFactor: 0.50,
+    });
+  }
 }
 
 function micAnimationPause() {
@@ -229,9 +244,13 @@ async function init() {
   $('#helpModal').modal();
   $('#divTraining').hide();
 
-  currentVoice = selectVoice(LANG);
+  if (!currentVoice) {
+    currentVoice = selectVoice(LANG);
+  }
 
-  recognizer = await createModel();
+  if (!recognizer) {
+    recognizer = await createModel();
+  }
 
   listenHotwordOffline();
 }
@@ -296,6 +315,7 @@ function testSpeech() {
   recognition.onend = function (event) {
     //Fired when the speech recognition service has disconnected.
     console.log('SpeechRecognition.onend');
+    listenHotwordOffline();
   }
 
   recognition.onnomatch = function (event) {
@@ -405,26 +425,50 @@ async function predictPose() {
 }
 
 function manualPosePrediction(pose) {
-  if (currentTraining == 'surfing') {
-    if (currentPose != 'gymUp') {
-      if (isGymUp(pose)) {
-        document.querySelector('#lblPosture').textContent = 'Move your arms down';
-        ding();
-        currentPose = 'gymUp';
-        postureCounter += 1;
-        document.querySelector('#lblCounter').textContent = postureCounter;
+  if (pose) {
+    if (currentTraining == 'surfing') {
+      if (currentPose != 'gymUp') {
+        if (isGymUp(pose)) {
+          document.querySelector('#lblPosture').textContent = 'Move your arms down';
+          ding();
+          currentPose = 'gymUp';
+          postureCounter += 1;
+          document.querySelector('#lblCounter').textContent = postureCounter;
 
-        motivationInProgress(postureCounter);
+          motivationInProgress(postureCounter);
+        }
+      } else if (currentPose != 'gymDown') {
+        if (isGymDown(pose)) {
+          document.querySelector('#lblPosture').textContent = 'Move your arms up';
+          ding();
+          currentPose = 'gymDown';
+          postureCounter += 1;
+          document.querySelector('#lblCounter').textContent = postureCounter;
+
+          motivationInProgress(postureCounter);
+        }
       }
-    } else if (currentPose != 'gymDown') {
-      if (isGymDown(pose)) {
-        document.querySelector('#lblPosture').textContent = 'Move your arms up';
-        ding();
-        currentPose = 'gymDown';
-        postureCounter += 1;
-        document.querySelector('#lblCounter').textContent = postureCounter;
+    } else if (currentTraining == 'gym') {
+      if (currentPose != 'liftweightsUp') {
+        if (isWeightsUp(pose)) {
+          document.querySelector('#lblPosture').textContent = 'Move the weights down';
+          ding();
+          currentPose = 'liftweightsUp';
+          postureCounter += 1;
+          document.querySelector('#lblCounter').textContent = postureCounter;
 
-        motivationInProgress(postureCounter);
+          motivationInProgress(postureCounter);
+        }
+      } else if (currentPose != 'liftweightsDown') {
+        if (isWeightsDown(pose)) {
+          document.querySelector('#lblPosture').textContent = 'Move the weights up';
+          ding();
+          currentPose = 'liftweightsDown';
+          postureCounter += 1;
+          document.querySelector('#lblCounter').textContent = postureCounter;
+
+          motivationInProgress(postureCounter);
+        }
       }
     }
   }
@@ -468,6 +512,45 @@ function isGymDown(pose) {
     return true;
   return false;
 }
+
+const DISTANCE_ACCURACY = 100;
+function isWeightsUp(pose) {
+  if (pose.keypoints[leftElbow].score >= minPartConfidence &&
+    pose.keypoints[leftShoulder].score >= minPartConfidence &&
+    pose.keypoints[leftWrist].score >= minPartConfidence &&
+    pose.keypoints[rightElbow].score >= minPartConfidence &&
+    pose.keypoints[rightShoulder].score >= minPartConfidence &&
+    pose.keypoints[rightElbow].score >= minPartConfidence &&
+    pose.keypoints[leftElbow].position.y >= pose.keypoints[leftShoulder].position.y &&
+    pose.keypoints[rightElbow].position.y >= pose.keypoints[rightShoulder].position.y &&
+    pose.keypoints[rightWrist].position.y <= pose.keypoints[rightElbow].position.y) {
+    const difLeft = (pose.keypoints[leftWrist].position.y - pose.keypoints[leftShoulder].position.y);
+    const difRight = (pose.keypoints[rightWrist].position.y - pose.keypoints[rightShoulder].position.y);
+
+    return (Math.sqrt(difLeft * difLeft) < DISTANCE_ACCURACY) &&
+      (Math.sqrt(difRight * difRight) < DISTANCE_ACCURACY);
+  }
+  return false;
+}
+
+function isWeightsDown(pose) {
+  if (pose.keypoints[leftElbow].score >= minPartConfidence &&
+    pose.keypoints[leftShoulder].score >= minPartConfidence &&
+    pose.keypoints[leftWrist].score >= minPartConfidence &&
+    pose.keypoints[rightElbow].score >= minPartConfidence &&
+    pose.keypoints[rightShoulder].score >= minPartConfidence &&
+    pose.keypoints[rightElbow].score >= minPartConfidence &&
+    pose.keypoints[leftHip].position.y <= pose.keypoints[leftWrist].position.y &&
+    pose.keypoints[rightHip].position.y <= pose.keypoints[rightWrist].position.y) {
+    const difLeft = (pose.keypoints[leftWrist].position.y - pose.keypoints[leftHip].position.y);
+    const difRight = (pose.keypoints[rightWrist].position.y - pose.keypoints[rightHip].position.y);
+
+    return (Math.sqrt(difLeft * difLeft) < DISTANCE_ACCURACY) &&
+      (Math.sqrt(difRight * difRight) < DISTANCE_ACCURACY);
+  }
+  return false;
+}
+
 
 function drawPose(pose) {
   if (webcam.canvas) {
