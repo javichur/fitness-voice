@@ -25,6 +25,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11"></script>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"
+    integrity="sha256-R4pqcOYV8lt7snxMQO/HSbVCFRPMdrhAFMH+vr9giYI=" crossorigin="anonymous"></script>
+
   <script src="./assets/scripts.js"></script>
 </head>
 
@@ -73,6 +76,10 @@
         <label id="lblPosture" style="font-size: 100px;"></label><br />
         <label id="lblCounter" style="font-size: 200px;"></label>
       </div>
+    </div>
+    
+    <div id="divStats" style="position:relative; height: 600px; margin-top: -80px;">
+      <canvas id="myChart" style="height: 500px !important; width: 700px !important; margin-left: auto; margin-right: auto;"></canvas>
     </div>
 
     <div id="albums" class="album py-5 bg-light" style="background-color: transparent !important; padding-top: 0px !important;">

@@ -172,7 +172,7 @@ function witResponseHander(result) {
       let person = result.entities['person:person'][0].body.toLowerCase();
       if (person) person = person.toLowerCase();
 
-      if(person == 'bill' || person == 'her' || person == 'joker' || person == 'morgan' || person == 'morpheus' || person == 'yellow') {
+      if (person == 'bill' || person == 'her' || person == 'joker' || person == 'morgan' || person == 'morpheus' || person == 'yellow') {
         currentAudioVoice = person;
         speak('Perfect! The next training will be led by ' + person);
       } else {
@@ -201,6 +201,7 @@ async function goTo(page) {
       $('#albums').hide();
       $('#titleH1').hide();
       $('#divTraining').show();
+      $('#divStats').hide();
       document.querySelector('#lblSampleUtterance').textContent = '"Coach, I want to change trainer voice"';
       initPose();
       break;
@@ -210,6 +211,7 @@ async function goTo(page) {
       $('#albums').hide();
       $('#titleH1').hide();
       $('#divTraining').show();
+      $('#divStats').hide();
       document.querySelector('#lblSampleUtterance').textContent = '"Coach, I want to change trainer voice"';
       initPose();
       break;
@@ -223,6 +225,7 @@ async function goTo(page) {
       $('#albums').show();
       $('#titleH1').show();
       $('#divTraining').hide();
+      $('#divStats').hide();
 
       await init();
       $('#helpModal').hide();
@@ -283,7 +286,42 @@ function getStats() {
     let surf = localStorage.getItem("total_surfing");
     if (!surf) surf = 0;
 
-    ret = 'Your gym stats: ' + gym + ' moves. Surfing stats: ' + surf + ' moves.'
+    ret = 'Your gym stats: ' + gym + ' moves. Surfing stats: ' + surf + ' moves.';
+
+    $("#divStats").show();
+
+    var ctxChart = document.getElementById('myChart').getContext('2d');
+    var myChart = new Chart(ctxChart, {
+      type: 'bar',
+      data: {
+        labels: ['Gym movements', 'Surf movements', 'Yoga movements (soon)'],
+        datasets: [{
+          data: [gym, surf, 0],
+          backgroundColor: [
+            'rgba(255, 99, 132, 0.2)',
+            'rgba(54, 162, 235, 0.2)',
+            'rgba(255, 206, 86, 0.2)',
+          ],
+          borderColor: [
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: false,
+        legend: false,
+        scales: {
+          yAxes: [{
+            ticks: {
+              beginAtZero: true,
+            }
+          }]
+        }
+      }
+    });
   } else {
     ret = 'Your statistics are not available. You must give the browser permission to store information.';
   }
@@ -305,6 +343,7 @@ function updateStatsSurfing(num) {
 
 async function init() {
   micAnimationPause();
+  $('#divStats').hide();
 
   var typed = new Typed("#lblSampleUtterance", {
     stringsElement: '#typed-strings',
