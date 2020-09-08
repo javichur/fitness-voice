@@ -3,17 +3,18 @@
 // 2020-09-04
 
 // wit + voice variables
+// const URL_BASE = 'https://javiercampos.es/projects/fitnessvoice/';
 const URL_BASE = 'http://localhost:5500/';
 const URL_MODEL = URL_BASE + "assets/coach-audio-model/";
 const HOTWORD = 'coach';
-const HOTWORD_ACCURACY = 0.70;
+const HOTWORD_ACCURACY = 0.60;
 const LANG = 'en-US';
 const WIT_TOKEN = '<MY TOKEN HERE :)>';
 const WIT_VERSION = '20200902';
 const WIT_ACCURACY = 0.7;
 let currentVoice = null; // synthetic voice
 let currentAudioVoice = null; // clone based voice
-let recognizer = null;
+let recognizerHotwordOffline = null;
 var synth = window.speechSynthesis;
 
 var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition;
@@ -144,7 +145,7 @@ function witResponseHander(result) {
           goTo('gym');
           break;
         default:
-          speak('I\'m sorry, I can\'t understand the sport. You can say Bill, Her, Joker, Morgan, Morpheus or Yellow. Repeat please.');
+          speak('I\'m sorry, I can\'t understand the sport. Repeat please.');
           break;
       }
       break;
@@ -159,14 +160,14 @@ function witResponseHander(result) {
       goTo('home');
       break;
     case 'stats':
-      getStats();
+      goTo('stats');
       break;
     case 'repeat':
       // TODO
       break;
     case 'set_voice':
       if (!result.entities || !result.entities['person:person'] || !result.entities['person:person'][0]) {
-        speak('I\'m sorry, I can\'t understand the voice you choose. Repeat please.');
+        speak('I\'m sorry, I can\'t understand the voice you choose. You can say Bill, Her, Joker, Morgan, Morpheus or Yellow. Repeat please.');
         return;
       }
       let person = result.entities['person:person'][0].body.toLowerCase();
@@ -196,13 +197,39 @@ function applause() {
 
 async function goTo(page) {
   switch (page) {
+    case 'stats':
+      currentTraining = null;
+
+      if (webcam) {
+        await webcam.stop();
+      }
+
+      $('#divTraining').hide();
+      getStats();
+      break;
     case 'surfing':
       currentTraining = 'surfing';
       $('#albums').hide();
       $('#titleH1').hide();
       $('#divTraining').show();
+      $('#divCanvasCam').show();
       $('#divStats').hide();
-      document.querySelector('#lblSampleUtterance').textContent = '"Coach, I want to change trainer voice"';
+      $('#lblCounter').show();
+      $('#imgYoga').hide();
+      document.querySelector('#lblPosture').textContent = '';
+      initPose();
+      break;
+
+    case 'yoga':
+      currentTraining = 'yoga';
+      $('#albums').hide();
+      $('#titleH1').hide();
+      $('#divTraining').show();
+      $('#divCanvasCam').show();
+      $('#divStats').hide();
+      $('#lblCounter').hide();
+      $('#imgYoga').show();
+      document.querySelector('#lblPosture').textContent = 'Try to repeat the Tree figure';
       initPose();
       break;
 
@@ -211,49 +238,55 @@ async function goTo(page) {
       $('#albums').hide();
       $('#titleH1').hide();
       $('#divTraining').show();
+      $('#divCanvasCam').show();
       $('#divStats').hide();
-      document.querySelector('#lblSampleUtterance').textContent = '"Coach, I want to change trainer voice"';
+      $('#lblCounter').show();
+      $('#imgYoga').hide();
+      document.querySelector('#lblPosture').textContent = '';
       initPose();
       break;
     case 'home':
-      currentTraining = null;
-
-      if (webcam) {
+      if (currentTraining && webcam) {
+        currentTraining = null;
         await webcam.stop();
       }
 
+      $('#divTraining').hide();
       $('#albums').show();
       $('#titleH1').show();
-      $('#divTraining').hide();
       $('#divStats').hide();
 
       await init();
-      $('#helpModal').hide();
-
-      document.querySelector('#lblSampleUtterance').textContent = '"Coach, I want to train yoga"';
+      //$('#helpModal').hide();
       break;
   }
 }
 
+let isIdle = true; // solo escuchar hotword si el user no está diciendo un comando.
+
 function listenHotwordOffline() {
   micAnimationPause();
 
-  if (!recognizer.isListening()) {
-    recognizer.listen(result => {
-      const scores = result.scores; // probability of prediction for each class
-      const classLabels = recognizer.wordLabels();
-      for (let i = 0; i < classLabels.length; i++) {
-        if (classLabels[i] == HOTWORD && result.scores[i].toFixed(2) >= HOTWORD_ACCURACY) {
-          // const classPrediction = classLabels[i] + ": " + result.scores[i].toFixed(2);
-          micAnimationPlay();
+  if (!recognizerHotwordOffline.isListening()) {
+    recognizerHotwordOffline.listen(result => {
+      console.log('recognizerHotwordOffline.listen');
+      if (isIdle) {
+        console.log('recognizerHotwordOffline.listen isListening');
+        const classLabels = recognizerHotwordOffline.wordLabels();
+        for (let i = 0; i < classLabels.length; i++) {
+          if (classLabels[i] == HOTWORD && result.scores[i].toFixed(2) >= HOTWORD_ACCURACY) {
+            // const classPrediction = classLabels[i] + ": " + result.scores[i].toFixed(2);
+            micAnimationPlay();
 
-          try {
-            recognizer.stopListening();
-          } catch (error) {
-            console.log('error stopping: ' + JSON.stringify(erro));
+            try {
+              // recognizerHotwordOffline.stopListening();
+              isIdle = false;
+              testSpeech();
+            } catch (error) {
+              console.log('error stopping recognizerHotwordOffline: ' + JSON.stringify(error));
+            }
+            break;
           }
-          testSpeech();
-          break;
         }
       }
     }, {
@@ -266,6 +299,8 @@ function listenHotwordOffline() {
 }
 
 function micAnimationPause() {
+  isIdle = true;
+
   const m = document.querySelector('#lottiemic');
   m.pause();
   m.seek('50%');
@@ -286,7 +321,10 @@ function getStats() {
     let surf = localStorage.getItem("total_surfing");
     if (!surf) surf = 0;
 
-    ret = 'Your gym stats: ' + gym + ' moves. Surfing stats: ' + surf + ' moves.';
+    let yoga = localStorage.getItem("total_yoga");
+    if (!yoga) yoga = 0;
+
+    ret = 'Keep training every week. Your stats are the following: ' + gym + ' moves. Surfing stats: ' + surf + ' moves. Total yoga: ' + yoga + ' moves.';
 
     $("#divStats").show();
 
@@ -294,9 +332,9 @@ function getStats() {
     var myChart = new Chart(ctxChart, {
       type: 'bar',
       data: {
-        labels: ['Gym movements', 'Surf movements', 'Yoga movements (soon)'],
+        labels: ['Gym movements', 'Surf movements', 'Yoga movements'],
         datasets: [{
-          data: [gym, surf, 0],
+          data: [gym, surf, yoga],
           backgroundColor: [
             'rgba(255, 99, 132, 0.2)',
             'rgba(54, 162, 235, 0.2)',
@@ -339,31 +377,38 @@ function updateStatsSurfing(num) {
   if (!cont) cont = '0';
   localStorage.setItem("total_surfing", parseInt(cont) + num);
 }
+function updateStatsYoga(num) {
+  var cont = localStorage.getItem("total_yoga");
+  if (!cont) cont = '0';
+  localStorage.setItem("total_yoga", parseInt(cont) + num);
+}
 
-
+var typedAnimation = null;
 async function init() {
   micAnimationPause();
   $('#divStats').hide();
+  $('#divTraining').hide();
 
-  var typed = new Typed("#lblSampleUtterance", {
-    stringsElement: '#typed-strings',
-    typeSpeed: 50,
-    backSpeed: 30,
-    backDelay: 500,
-    startDelay: 1000,
-    loop: true,
-  });
+  if (!typedAnimation) {
+    typedAnimation = new Typed("#lblSampleUtterance", {
+      stringsElement: '#typed-strings',
+      typeSpeed: 50,
+      backSpeed: 30,
+      backDelay: 500,
+      startDelay: 1000,
+      loop: true,
+    });
+  }
 
   $('#helpModal').modal();
-  $('#divTraining').hide();
 
   if (!currentVoice) {
     currentVoice = selectVoice(LANG);
     speak('Welcome to Fitness Voice, the AI voice-controlled trainer in your browser.');
   }
 
-  if (!recognizer) {
-    recognizer = await createModel();
+  if (!recognizerHotwordOffline) {
+    recognizerHotwordOffline = await createModel();
   }
 
   listenHotwordOffline();
@@ -376,6 +421,8 @@ function showGenericModal(txt) {
 }
 
 function testSpeech() {
+
+  isIdle = false;
 
   // var grammar = '#JSGF V1.0; grammar phrase; public <phrase> = ' + phrase +';';
   var recognition = new SpeechRecognition();
@@ -404,16 +451,19 @@ function testSpeech() {
 
     console.log('Confidence: ' + event.results[0][0].confidence);
 
-    listenHotwordOffline(); // reactivate tensorflow hotword detection.
+    recognition.stop(); // debug revisar
+    
+    micAnimationPause();
   };
 
   recognition.onspeechend = function () {
     recognition.stop();
+    micAnimationPause();
   }
 
   recognition.onerror = function (event) {
     console.log('SpeechRecognition.onerror');
-    listenHotwordOffline();
+    micAnimationPause();
   }
 
   recognition.onaudiostart = function (event) {
@@ -429,7 +479,7 @@ function testSpeech() {
   recognition.onend = function (event) {
     //Fired when the speech recognition service has disconnected.
     console.log('SpeechRecognition.onend');
-    listenHotwordOffline();
+    micAnimationPause();
   }
 
   recognition.onnomatch = function (event) {
@@ -482,6 +532,9 @@ let postureCounter = 0;
 
 async function initPose() {
 
+  document.querySelector('#lottiecameraloading').play();
+  $('#lottiecameraloading').show();
+
   postureCounter = 0;
   document.querySelector('#lblCounter').textContent = postureCounter;
 
@@ -497,14 +550,18 @@ async function initPose() {
   // Convenience function to setup a webcam
   const size_html = 600;
   const size_model = 600;
-  webcam = new tmPose.Webcam(size_model, size_model, true); // width, height, flip
+  webcam = new tmPose.Webcam(800, size_model, true); // width, height, flip
   await webcam.setup(); // request access to the webcam
   await webcam.play();
   window.requestAnimationFrame(loop);
 
+  $("#divCanvasCam").css("opacity", "1");
+  $('#lottiecameraloading').hide();
+  document.querySelector('#lottiecameraloading').pause();
+
   // append/get elements to the DOM
   const canvas = document.getElementById("canvas");
-  canvas.width = size_html;
+  canvas.width = 800;
   canvas.height = size_html;
   ctx = canvas.getContext("2d");
   // labelContainer = document.getElementById("label-container");
@@ -549,8 +606,8 @@ function manualPosePrediction(pose) {
           postureCounter += 1;
           document.querySelector('#lblCounter').textContent = postureCounter;
 
-          motivationInProgress(postureCounter);
           updateStatsSurfing(1);
+          motivationInProgress(postureCounter);
         }
       } else if (currentPose != 'gymDown') {
         if (isGymDown(pose)) {
@@ -560,8 +617,8 @@ function manualPosePrediction(pose) {
           postureCounter += 1;
           document.querySelector('#lblCounter').textContent = postureCounter;
 
-          motivationInProgress(postureCounter);
           updateStatsSurfing(1);
+          motivationInProgress(postureCounter);
         }
       }
     } else if (currentTraining == 'gym') {
@@ -573,8 +630,8 @@ function manualPosePrediction(pose) {
           postureCounter += 1;
           document.querySelector('#lblCounter').textContent = postureCounter;
 
-          motivationInProgress(postureCounter);
           updateStatsGym(1);
+          motivationInProgress(postureCounter);
         }
       } else if (currentPose != 'liftweightsDown') {
         if (isWeightsDown(pose)) {
@@ -584,9 +641,15 @@ function manualPosePrediction(pose) {
           postureCounter += 1;
           document.querySelector('#lblCounter').textContent = postureCounter;
 
-          motivationInProgress(postureCounter);
           updateStatsGym(1);
+          motivationInProgress(postureCounter);
         }
+      }
+    } else if (currentTraining == 'yoga') {
+      if (isTreeFigure(pose)) {
+        applause();
+        updateStatsYoga(1);
+        goTo('stats');
       }
     }
   }
@@ -601,7 +664,7 @@ function motivationInProgress(counter) {
     else speakWithAudioVoice('cheerup');
   } else if (counter == 20) {
     applause();
-    goTo('home');
+    goTo('stats');
   }
 }
 
@@ -659,7 +722,7 @@ function isWeightsDown(pose) {
     pose.keypoints[leftWrist].score >= minPartConfidence &&
     pose.keypoints[rightElbow].score >= minPartConfidence &&
     pose.keypoints[rightShoulder].score >= minPartConfidence &&
-    pose.keypoints[rightElbow].score >= minPartConfidence &&
+    pose.keypoints[rightWrist].score >= minPartConfidence &&
     pose.keypoints[leftHip].position.y <= pose.keypoints[leftWrist].position.y &&
     pose.keypoints[rightHip].position.y <= pose.keypoints[rightWrist].position.y) {
     const difLeft = (pose.keypoints[leftWrist].position.y - pose.keypoints[leftHip].position.y);
@@ -667,6 +730,35 @@ function isWeightsDown(pose) {
 
     return (Math.sqrt(difLeft * difLeft) < DISTANCE_ACCURACY) &&
       (Math.sqrt(difRight * difRight) < DISTANCE_ACCURACY);
+  }
+  return false;
+}
+
+const DISTANCE_ACCURACY_YOGA = 80;
+function isTreeFigure(pose) {
+  if (pose.keypoints[leftElbow].score >= minPartConfidence &&
+    pose.keypoints[leftShoulder].score >= minPartConfidence &&
+    pose.keypoints[leftWrist].score >= minPartConfidence &&
+    pose.keypoints[rightElbow].score >= minPartConfidence &&
+    pose.keypoints[rightShoulder].score >= minPartConfidence &&
+    pose.keypoints[rightWrist].score >= minPartConfidence &&
+    pose.keypoints[leftAnkle].score >= minPartConfidence &&
+    pose.keypoints[leftKnee].score >= minPartConfidence &&
+    pose.keypoints[rightKnee].score >= minPartConfidence &&
+    pose.keypoints[leftEye].score >= minPartConfidence &&
+    pose.keypoints[rightEye].score >= minPartConfidence &&
+    pose.keypoints[leftWrist].position.y <= pose.keypoints[leftEye].position.y &&
+    pose.keypoints[rightWrist].position.y <= pose.keypoints[rightEye].position.y) {
+    const difHandsX = (pose.keypoints[leftWrist].position.x - pose.keypoints[rightWrist].position.x);
+    const difHandsY = (pose.keypoints[leftWrist].position.y - pose.keypoints[rightWrist].position.y);
+
+    const difAnkleX = (pose.keypoints[leftAnkle].position.x - pose.keypoints[rightKnee].position.x);
+    const difAnkleY = (pose.keypoints[leftAnkle].position.y - pose.keypoints[rightKnee].position.y);
+
+    return (Math.sqrt(difHandsX * difHandsX) < DISTANCE_ACCURACY_YOGA) &&
+      (Math.sqrt(difHandsY * difHandsY) < DISTANCE_ACCURACY_YOGA) &&
+      (Math.sqrt(difAnkleX * difAnkleX) < DISTANCE_ACCURACY_YOGA) &&
+      (Math.sqrt(difAnkleY * difAnkleY) < DISTANCE_ACCURACY_YOGA);
   }
   return false;
 }

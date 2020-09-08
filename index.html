@@ -54,27 +54,32 @@
         <p>
           <div id="typed-strings" style="display:none;">
             <p> I want to train surfing"</p>
-            <p>change voice to Her</p>
+            <p> change voice to Her"</p>
             <p> I want to train gym"</p>
             <p> help me"</p>
             <p> go home"</p>
-            <p>change voice to Bill</p>
+            <p> change voice to Bill"</p>
             <p> show me stats"</p>
-            <p>change voice to Morgan</p>
+            <p> change voice to Morgan"</p>
           </div>
           <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
           <lottie-player id="lottiemic" src="./assets/mic1.json" background="transparent" speed="1"
-            style="margin-top: -500px; width: 100%; height: 100%;" loop autoplay
-            onclick="showGenericModal('No tap needed :) . Just say \'Coach, I want to train yoga\'')"></lottie-player>
+            style="margin-top: -500px; width: 100%; height: 100%;" loop
+            onclick="showGenericModal('No tap needed :) . Just say \'Coach, I want to train yoga\'' + recognizerHotwordOffline.isListening())"></lottie-player>
         </p>
       </div>
     </section>
 
-    <div id="divTraining" style="position:relative; height: 600px; margin-top: -80px;">
-      <canvas id="canvas"></canvas>
-      <div style="float: right; text-align: center; width: 60%;">
-        <label id="lblPosture" style="font-size: 100px;"></label><br />
+    <div id="divTraining" style="position:relative; display: flex; flex-direction: row; height: 600px; margin-top: -80px; margin-bottom: 20px;">
+      <div id="divCanvasCam" style="display: none; width: 800px; background-color: black; opacity: 0.5;">
+        <lottie-player id="lottiecameraloading" src="./assets/camera-loading.json" background="transparent" speed="1"
+            style="width: 100%; height: 100%;" loop></lottie-player>
+        <canvas id="canvas" height="600" width="800"></canvas>
+      </div>
+      <div style="float: right; text-align: center; width: 60%; color: #333333;">
+        <label id="lblPosture" style="font-size: 80px;"></label><br />
         <label id="lblCounter" style="font-size: 200px;"></label>
+        <img id="imgYoga" src="./assets/tree-yoga.jpg" style="height: 78%; display: none;" />
       </div>
     </div>
     
@@ -95,7 +100,7 @@
                   <div class="btn-group">
                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showGenericModal('Use your voice to select an exercise :)')">Don't click here</button>
                   </div>
-                  <small class="text-muted">9 mins</small>
+                  <small class="text-muted">20 reps</small>
                 </div>
               </div>
             </div>
@@ -118,12 +123,12 @@
             <div class="card mb-4 shadow-sm">
               <img style="width: 100%;" src="./assets/yoga1.jpg" />
               <div class="card-body">
-                <p class="card-text"><i>(coming soon)</i> The main yoga exercises to gain elasticity and feel better. Relax your body and mind.</p>
+                <p class="card-text">The main yoga exercises to gain elasticity and feel better. Relax your body and mind. The tree spirit.</p>
                 <div class="d-flex justify-content-between align-items-center">
                   <div class="btn-group">
                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showGenericModal('Use your voice to select an exercise :)')">Don't click here</button>
                   </div>
-                  <small class="text-muted">15 mins</small>
+                  <small class="text-muted">1 figure</small>
                 </div>
               </div>
             </div>
