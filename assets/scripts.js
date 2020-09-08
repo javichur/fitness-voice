@@ -9,7 +9,7 @@ const URL_MODEL = URL_BASE + "assets/coach-audio-model/";
 const HOTWORD = 'coach';
 const HOTWORD_ACCURACY = 0.60;
 const LANG = 'en-US';
-const WIT_TOKEN = '<MY TOKEN HERE :)>';
+const WIT_TOKEN = '36XCICQUNDFMFIOXGXDILBBARBVU7IY3';
 const WIT_VERSION = '20200902';
 const WIT_ACCURACY = 0.7;
 let currentVoice = null; // synthetic voice
@@ -202,8 +202,10 @@ async function goTo(page) {
 
       if (webcam) {
         await webcam.stop();
+        webcam = null;
       }
 
+      $('#albums').hide();
       $('#divTraining').hide();
       getStats();
       break;
@@ -249,6 +251,7 @@ async function goTo(page) {
       if (currentTraining && webcam) {
         currentTraining = null;
         await webcam.stop();
+        webcam = null;
       }
 
       $('#divTraining').hide();
@@ -571,9 +574,12 @@ async function initPose() {
 }
 
 async function loop(timestamp) {
-  webcam.update(); // update the webcam frame
-  await predictPose();
-  window.requestAnimationFrame(loop);
+
+  if(webcam){
+    webcam.update(); // update the webcam frame
+    await predictPose();
+    window.requestAnimationFrame(loop);
+  }
 }
 
 async function predictPose() {
