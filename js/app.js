@@ -9,17 +9,17 @@ import * as SoundEffects from './soundEffects.js';
 import * as UI from './ui.js';
 import { HotWord } from './hotword.js';
 import { ListenCommand } from './listenCommand.js';
-
-let currentVoice = null; // synthetic voice
-let currentAudioVoice = null; // clone based voice
-var synth = window.speechSynthesis;
+import { Voice } from './voice.js';
+import { VoiceClone } from './voiceClone.js';
 
 // pose variables
-let pose_model, webcam;
+let pose_model;
+let webcam;
 let currentPose = null; // null | gymDown | gymUp | liftweightsUp | liftweightsDown | yoga
 let currentTraining = null; // null | gym | surfing | yoga
-
 let painter = null; // BodyPainter class.
+
+let isFirstInit = true;
 
 export async function init() {
   UI.initUI();
@@ -30,13 +30,13 @@ export async function init() {
   ListenCommand.handlerlistened = witRequest;
   ListenCommand.handlerEnd = handlerListenCommandEnd;
 
-  if (!currentVoice) {
-    currentVoice = selectVoice(Settings.LANG);
-    speak('Welcome to Fitness Voice, the AI voice-controlled trainer in your browser.');
+  Voice.selectVoice(Settings.LANG);
+  if (isFirstInit) {
+    Voice.speak('Welcome to Fitness Voice, the AI voice-controlled trainer in your browser.');
+    isFirstInit = false;
   }
 
   await HotWord.createHotwordModelIfNotExists();
-
   HotWord.listenHotwordOffline();
 }
 
@@ -75,124 +75,100 @@ function witRequest(msg) {
   }
 }
 
+function isWitNotUndertand(result) {
+  return !result || !result.intents || !result.intents[0] || result.intents[0].confidence < Settings.WIT_ACCURACY;
+}
+
 function witResponseHander(result) {
-  if (!result || !result.intents || !result.intents[0] || result.intents[0].confidence < Settings.ACCURACY) {
-    speak('I\'m sorry, I can\'t understand. Repeat please.');
-    return; // no result
+  if (isWitNotUndertand(result)) {
+    Voice.speak('I\'m sorry, I can\'t understand. Repeat please.');
+    return;
   }
 
   const intent = result.intents[0];
   switch (intent.name) {
     case 'letsgo':
-      speak('OK, Lets go! Tell me something like "I want to traing surfing".');
-      $("#helpModal").modal('hide');
-      $("#genericModal").modal('hide');
+      witIntentHandlerLetsGo();
       break;
     case 'set_training':
-      if (!result.entities || !result.entities['sport:sport'] || !result.entities['sport:sport'][0]) {
-        speak('I\'m sorry, I can\'t understand the sport. Repeat please.');
-        return;
-      }
-      const sport = result.entities['sport:sport'][0].body;
-      switch (sport) {
-        case 'surfing':
-          if (!currentAudioVoice) speak('Great, I like surfing! In this exercise, stand in front of the camera and move the 2 arms on each side of your body, up and down.');
-          else speakWithAudioVoice('surf');
-          goTo('surfing');
-          break;
-        case 'yoga':
-          speak('Nice, I like yoga!');
-          goTo('yoga');
-          break;
-        case 'gym':
-          if (!currentAudioVoice) speak('Good choice, let\'s go to the gym! In this exercise, stand on your side, and move a barbell up and down with both arms.');
-          else speakWithAudioVoice('gym');
-          goTo('gym');
-          break;
-        default:
-          speak('I\'m sorry, I can\'t understand the sport. Repeat please.');
-          break;
-      }
+      witIntentHandlerSetTraining(result);
       break;
     case 'help':
-      speak('Ok, I show you information about Fitness Voice.');
-      $("#helpModal").modal();
-      SoundEffects.ding();
+      witIntentHandlerHelp();
       break;
     case 'gohome':
-      if (!currentAudioVoice) speak('Ok, going back to the home.');
-      else speakWithAudioVoice('home');
-      goTo('home');
+      witIntentHandlerGoHome();
       break;
     case 'stats':
       goTo('stats');
       break;
+    case 'set_voice':
+      witIntentHandlerSetVoice(result);
+      break;
     case 'repeat':
       // TODO
       break;
-    case 'set_voice':
-      if (!result.entities || !result.entities['person:person'] || !result.entities['person:person'][0]) {
-        speak('I\'m sorry, I can\'t understand the voice you choose. You can say Bill, Her, Joker, Morgan, Morpheus or Yellow. Repeat please.');
-        return;
-      }
-      let person = result.entities['person:person'][0].body.toLowerCase();
-      if (person) person = person.toLowerCase();
+  }
+}
 
-      if (person == 'bill' || person == 'her' || person == 'joker' || person == 'morgan' || person == 'morpheus' || person == 'yellow') {
-        currentAudioVoice = person;
-        speak('Perfect! The next training will be led by ' + person);
-      } else {
-        currentAudioVoice = null;
-        speak('Okay! The next training will be led by computer voice.');
-      }
+function witIntentHandlerLetsGo() {
+  Voice.speak('OK, Lets go! Tell me something like "I want to traing surfing".');
+  $("#helpModal").modal('hide');
+  $("#genericModal").modal('hide');
+}
 
+function witIntentHandlerHelp() {
+  Voice.speak('Ok, I show you information about Fitness Voice.');
+  $("#helpModal").modal();
+  SoundEffects.ding();
+}
+
+function witIntentHandlerGoHome() {
+  if (!VoiceClone.currentAudioVoice) Voice.speak('Ok, going back to the home.');
+  else speakWithAudioVoice('home');
+  goTo('home');
+}
+
+function witIntentHandlerSetTraining(result) {
+  if (!result.entities || !result.entities['sport:sport'] || !result.entities['sport:sport'][0]) {
+    Voice.speak('I\'m sorry, I can\'t understand the sport. Repeat please.');
+    return;
+  }
+  const sport = result.entities['sport:sport'][0].body;
+  switch (sport) {
+    case 'surfing':
+      if (!VoiceClone.currentAudioVoice) Voice.speak('Great, I like surfing! In this exercise, stand in front of the camera and move the 2 arms on each side of your body, up and down.');
+      else VoiceClone.speakWithAudioVoice('surf');
+      goTo('surfing');
+      break;
+    case 'yoga':
+      Voice.speak('Nice, I like yoga!');
+      goTo('yoga');
+      break;
+    case 'gym':
+      if (!VoiceClone.currentAudioVoice) Voice.speak('Good choice, let\'s go to the gym! In this exercise, stand on your side, and move a barbell up and down with both arms.');
+      else VoiceClone.speakWithAudioVoice('gym');
+      goTo('gym');
+      break;
+    default:
+      Voice.speak('I\'m sorry, I can\'t understand the sport. Repeat please.');
       break;
   }
 }
 
-
-function selectVoice(lang) {
-  const voices = synth.getVoices();
-  for (let i = 0; i < voices.length; i++) {
-    if (voices[i].lang === lang) {
-      return voices[i];
-    }
-  }
-}
-
-// let isOnceError = true; // solo 1 vez el error.
-function speak(msg) {
-  if (synth.speaking) {
-    // if(isOnceError) {
-    //   alert('Error. Your web browser is not compatible with Synthesis speaking.');
-    //   isOnceError = false;
-    // }
+function witIntentHandlerSetVoice(result) {
+  if (!result.entities || !result.entities['person:person'] || !result.entities['person:person'][0]) {
+    speak('I\'m sorry, I can\'t understand the voice you choose. You can say Bill, Her, Joker, Morgan, Morpheus or Yellow. Repeat please.');
     return;
   }
-  if (msg !== '') {
-    var utterThis = new SpeechSynthesisUtterance(msg);
-    utterThis.onend = function (event) {
-      console.log('SpeechSynthesisUtterance.onend');
-    }
-    utterThis.onerror = function (event) {
-      console.error('SpeechSynthesisUtterance.onerror: ' + JSON.stringify(event));
-    }
+  let person = result.entities['person:person'][0].body.toLowerCase();
 
-    utterThis.lang = Settings.LANG;
-    utterThis.voice = currentVoice;
-    // utterThis.volume = 1;
-    utterThis.text = msg;
-    utterThis.pitch = 1;
-    utterThis.rate = 1;
-
-    synth.speak(utterThis);
-  }
-}
-
-function speakWithAudioVoice(key) {
-  if (currentAudioVoice) {
-    var audio = new Audio(`./assets/audios/${currentAudioVoice}-${key}.mp3`);
-    audio.play();
+  if (VoiceClone.isValidVoiceName(person)) {
+    VoiceClone.currentAudioVoice = person;
+    Voice.speak('Perfect! The next training will be led by ' + person);
+  } else {
+    VoiceClone.currentAudioVoice = null;
+    Voice.speak('Okay! The next training will be led by computer voice.');
   }
 }
 
@@ -209,7 +185,7 @@ async function goTo(page) {
       $('#albums').hide();
       $('#divTraining').hide();
       let txt = UI.getStats();
-      speak(txt);
+      Voice.speak(txt);
       break;
     case 'surfing':
       currentTraining = 'surfing';
@@ -287,8 +263,7 @@ function updateStatsYoga(num) {
 
 async function initPose() {
 
-  document.querySelector('#lottiecameraloading').play();
-  $('#lottiecameraloading').show();
+  UI.cameraLoading();
 
   const modelURL = Settings.URL_POSE_MODEL + 'model.json';
   const metadataURL = Settings.URL_POSE_MODEL + 'metadata.json';
@@ -306,9 +281,7 @@ async function initPose() {
   await webcam.play();
   window.requestAnimationFrame(loop);
 
-  $("#divCanvasCam").css("opacity", "1");
-  $('#lottiecameraloading').hide();
-  document.querySelector('#lottiecameraloading').pause();
+  UI.cameraLoaded();
 
   // append/get elements to the DOM
   const canvas = document.getElementById("canvas");
@@ -319,7 +292,6 @@ async function initPose() {
   SimplePoseDetection.minPartConfidence = Settings.MIN_PART_CONFIDENCE;
 
   painter.postureCounter = 0;
-  document.querySelector('#lblCounter').textContent = painter.postureCounter;
 }
 
 async function loop(timestamp) {
@@ -404,10 +376,10 @@ function incrementPostureCounter() {
 
 function motivationInProgress(counter) {
   if (counter == 10) {
-    if (!currentAudioVoice) speak('Perfect, you are improving your six pack. Look it! Continues until 20 repetitions.');
+    if (!VoiceClone.currentAudioVoice) Voice.speak('Perfect, you are improving your six pack. Look it! Continues until 20 repetitions.');
     else speakWithAudioVoice('perfect');
   } else if (counter == 5 || counter == 15) {
-    if (!currentAudioVoice) speak('cheer up!');
+    if (!VoiceClone.currentAudioVoice) Voice.speak('cheer up!');
     else speakWithAudioVoice('cheerup');
   } else if (counter == 20) {
     SoundEffects.applause();

@@ -94,4 +94,16 @@ function getStats() {
   return ret;
 }
 
-export { showGenericModal, micAnimationPause, micAnimationPlay, getStats, initUI };
+function cameraLoading() {
+  document.querySelector('#lottiecameraloading').play();
+  $('#lottiecameraloading').show();
+}
+
+function cameraLoaded() {
+  $("#divCanvasCam").css("opacity", "1");
+  $('#lottiecameraloading').hide();
+  document.querySelector('#lottiecameraloading').pause();
+  document.querySelector('#lblCounter').textContent = 0;
+}
+
+export { showGenericModal, micAnimationPause, micAnimationPlay, getStats, initUI, cameraLoading, cameraLoaded };
