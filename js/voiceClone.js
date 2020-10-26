@@ -3,7 +3,7 @@
 // Created by javiercampos.es
 
 export class VoiceClone {
-  static currentAudioVoice = null; // clone based voice (Bill, etc...)
+  static currentAudioVoice = null; // clone based voice (Bill, Her, Morgan, Joker...).
 
   static speakWithAudioVoice(key) {
     if (this.currentAudioVoice) {
