@@ -68,7 +68,7 @@
           <p> change voice to Morgan"</p>
         </div>
         <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-        <lottie-player id="lottiemic" src="./assets/mic1.json" background="transparent" speed="1"
+        <lottie-player id="lottiemic" src="./assets/animations/mic1.json" background="transparent" speed="1"
           style="margin-top: -500px; width: 100%; height: 100%;" loop
           onclick="showGenericModal('No tap needed :) . Just say Coach, I want to train yoga')"></lottie-player>
         </p>
@@ -78,14 +78,14 @@
     <div id="divTraining"
       style="position:relative; display: flex; flex-direction: row; height: 600px; margin-top: -80px; margin-bottom: 20px;">
       <div id="divCanvasCam" style="display: none; width: 800px; background-color: black; opacity: 0.5;">
-        <lottie-player id="lottiecameraloading" src="./assets/camera-loading.json" background="transparent" speed="1"
+        <lottie-player id="lottiecameraloading" src="./assets/animations/camera-loading.json" background="transparent" speed="1"
           style="width: 100%; height: 100%;" loop></lottie-player>
         <canvas id="canvas" height="600" width="800"></canvas>
       </div>
       <div style="float: right; text-align: center; width: 60%; color: #333333;">
         <label id="lblPosture" style="font-size: 80px;"></label><br />
         <label id="lblCounter" style="font-size: 200px;"></label>
-        <img id="imgYoga" src="./assets/tree-yoga.jpg" style="height: 78%; display: none;" />
+        <img id="imgYoga" src="./assets/images/tree-yoga.jpg" style="height: 78%; display: none;" />
       </div>
     </div>
 
@@ -101,7 +101,7 @@
         <div class="row">
           <div class="col-md-4">
             <div class="card mb-4 shadow-sm">
-              <img style="width: 100%;" src="./assets/gym.jpg" />
+              <img style="width: 100%;" src="./assets/images/gym.jpg" />
               <div class="card-body">
                 <p class="card-text">Fun gym exercises at home. Gain muscle throughout your body. Reach your next goal!
                 </p>
@@ -117,7 +117,7 @@
           </div>
           <div class="col-md-4">
             <div class="card mb-4 shadow-sm">
-              <img style="width: 100%;" src="./assets/surf1.jpg" />
+              <img style="width: 100%;" src="./assets/images/surf1.jpg" />
               <div class="card-body">
                 <p class="card-text">Arm exercises for surfers. Improve the strength of your arms and abs. Look at the
                   results!</p>
@@ -133,7 +133,7 @@
           </div>
           <div class="col-md-4">
             <div class="card mb-4 shadow-sm">
-              <img style="width: 100%;" src="./assets/yoga1.jpg" />
+              <img style="width: 100%;" src="./assets/images/yoga1.jpg" />
               <div class="card-body">
                 <p class="card-text">The main yoga exercises to gain elasticity and feel better. Relax your body and
                   mind. The tree spirit.</p>
@@ -204,7 +204,7 @@
               any buttons, just start talking</b>.</p>
         </div>
         <div class="modal-footer">
-          <img id="micInHelpModal" src="./assets/mic.png" style="height: 20px;" /><i>Say 'Coach, lets go!'</i> <button
+          <img id="micInHelpModal" src="./assets/images/mic.png" style="height: 20px;" /><i>Say 'Coach, lets go!'</i> <button
             type="button" class="btn btn-dark" data-dismiss="modal"> Lets
             go!</button>
         </div>
