@@ -13,6 +13,9 @@ const Settings = {
 
   MIN_PART_CONFIDENCE: 0.4, // pose confidence
   URL_POSE_MODEL: './my_model_pose/',
+
+  WEBCAM_HEIGHT: 600,
+  WEBCAM_WIDTH: 800,
 }
 Settings.URL_HOTWORD_MODEL = Settings.URL_BASE + 'assets/coach-audio-model/';
 

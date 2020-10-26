@@ -4,8 +4,11 @@
 var typedAnimation = null;
 function initUI() {
   micAnimationPause();
+
   $('#divStats').hide();
   $('#divTraining').hide();
+  $('#albums').show();
+  $('#titleH1').show();
 
   if (!typedAnimation) {
     typedAnimation = new Typed("#lblSampleUtterance", {
@@ -39,7 +42,10 @@ function micAnimationPlay() {
   $("#micInHelpModal").show();
 }
 
-function getStats() {
+function showStats() {
+  $('#albums').hide();
+  $('#divTraining').hide();
+
   let ret = '';
   if (typeof (Storage) !== "undefined") {
     let gym = localStorage.getItem("total_gym");
@@ -106,4 +112,31 @@ function cameraLoaded() {
   document.querySelector('#lblCounter').textContent = 0;
 }
 
-export { showGenericModal, micAnimationPause, micAnimationPlay, getStats, initUI, cameraLoading, cameraLoaded };
+function updateTextTraining(msg, counter) {
+  document.querySelector('#lblPosture').textContent = msg;
+  document.querySelector('#lblCounter').textContent = counter;
+}
+
+function showSurfOrGym() {
+  $('#albums').hide();
+  $('#titleH1').hide();
+  $('#divTraining').show();
+  $('#divCanvasCam').show();
+  $('#divStats').hide();
+  $('#lblCounter').show();
+  $('#imgYoga').hide();
+  document.querySelector('#lblPosture').textContent = '';
+}
+
+function showYoga() {
+  $('#albums').hide();
+  $('#titleH1').hide();
+  $('#divTraining').show();
+  $('#divCanvasCam').show();
+  $('#divStats').hide();
+  $('#lblCounter').hide();
+  $('#imgYoga').show();
+  document.querySelector('#lblPosture').textContent = 'Try to repeat the Tree figure';
+}
+
+export { showGenericModal, micAnimationPause, micAnimationPlay, showStats, initUI, cameraLoading, cameraLoaded, updateTextTraining, showSurfOrGym, showYoga };

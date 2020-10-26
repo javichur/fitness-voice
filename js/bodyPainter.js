@@ -8,9 +8,26 @@ export class BodyPainter {
   ctx = null;
   minPartConfidence = 0;
 
-  constructor(canvas, confidence) {
+  constructor(canvasName, width, height, confidence) {
+    // append/get elements to the DOM
+    const canvas = document.getElementById(canvasName);
+    canvas.width = width;
+    canvas.height = height;
     this.ctx = canvas.getContext("2d");
     this.minPartConfidence = confidence;
+    this.postureCounter = 0;
+  }
+
+  isExerciseCompleted() {
+    return this.postureCounter == 20;
+  }
+
+  isSixPackUnlocked() {
+    return this.postureCounter == 10;
+  }
+
+  isPartialGoal() {
+    return this.postureCounter == 5 || this.postureCounter == 15;
   }
 
   drawPose(pose, webcam) {

@@ -12,9 +12,8 @@ import { ListenCommand } from './listenCommand.js';
 import { Voice } from './voice.js';
 import { VoiceClone } from './voiceClone.js';
 
-// pose variables
-let pose_model;
-let webcam;
+let poseModel = null;
+let webcam = null;
 let currentPose = null; // null | gymDown | gymUp | liftweightsUp | liftweightsDown | yoga
 let currentTraining = null; // null | gym | surfing | yoga
 let painter = null; // BodyPainter class.
@@ -24,42 +23,46 @@ let isFirstInit = true;
 export async function init() {
   UI.initUI();
 
+  // 1. It will run handlerHotwordDetected() when the hotword is detected.
   HotWord.isIdle = true;
   HotWord.handlerHotWordDetected = handlerHotwordDetected;
 
+  await HotWord.createHotwordModelIfNotExists(); // 2. Initialize hotword detection.
+  HotWord.listenHotwordOffline();
+
+  // 3. It will run witRequest(message) after listening a right user voice.
   ListenCommand.handlerlistened = witRequest;
-  ListenCommand.handlerEnd = handlerListenCommandEnd;
+
+  // 4. It will run handlerListenCommandEnd() when listening ends.
+  ListenCommand.handlerEnd = handlerListenCommandEnd; // clue: it reactivates hotword detection.
 
   Voice.selectVoice(Settings.LANG);
-  if (isFirstInit) {
+  if (isFirstInit) { // 5. Welcome voice message
     Voice.speak('Welcome to Fitness Voice, the AI voice-controlled trainer in your browser.');
     isFirstInit = false;
   }
-
-  await HotWord.createHotwordModelIfNotExists();
-  HotWord.listenHotwordOffline();
 }
 
 function handlerHotwordDetected() {
   UI.micAnimationPlay();
 
   try {
-    ListenCommand.testSpeech();
+    ListenCommand.testSpeech(); // listening the command
   } catch (error) {
     console.log('error handlerHotwordDetected: ' + JSON.stringify(error));
   }
 }
 
 function handlerListenCommandEnd() {
-  HotWord.isIdle = true;
+  HotWord.isIdle = true; // activate hotword detection again.
   UI.micAnimationPause();
 }
 
 
-function witRequest(msg) {
-  if (msg !== '') {
+function witRequest(message) {
+  if (message !== '') {
     $.ajax({
-      url: `https://api.wit.ai/message?v=${Settings.WIT_VERSION}&q=${msg}`,
+      url: `https://api.wit.ai/message?v=${Settings.WIT_VERSION}&q=${message}`,
       type: 'GET',
       contentType: 'application/json',
       headers: {
@@ -130,7 +133,7 @@ function witIntentHandlerGoHome() {
 }
 
 function witIntentHandlerSetTraining(result) {
-  if (!result.entities || !result.entities['sport:sport'] || !result.entities['sport:sport'][0]) {
+  if (!hasWitUnderstoodTheSport(result)) {
     Voice.speak('I\'m sorry, I can\'t understand the sport. Repeat please.');
     return;
   }
@@ -151,9 +154,18 @@ function witIntentHandlerSetTraining(result) {
       goTo('gym');
       break;
     default:
-      Voice.speak('I\'m sorry, I can\'t understand the sport. Repeat please.');
+      // impossible case. hasWitUnderstoodTheSport() is checked first.
       break;
   }
+}
+
+function hasWitUnderstoodTheSport(result) {
+  if(!result.entities || !result.entities['sport:sport'] || !result.entities['sport:sport'][0]) {
+    return false;
+  }
+  const sport = result.entities['sport:sport'][0].body;
+  const allSports = ['surfing', 'yoga', 'gym'];
+  return allSports.includes(sport);
 }
 
 function witIntentHandlerSetVoice(result) {
@@ -162,7 +174,6 @@ function witIntentHandlerSetVoice(result) {
     return;
   }
   let person = result.entities['person:person'][0].body.toLowerCase();
-
   if (VoiceClone.isValidVoiceName(person)) {
     VoiceClone.currentAudioVoice = person;
     Voice.speak('Perfect! The next training will be led by ' + person);
@@ -175,94 +186,48 @@ function witIntentHandlerSetVoice(result) {
 async function goTo(page) {
   switch (page) {
     case 'stats':
-      currentTraining = null;
-
-      if (webcam) {
-        await webcam.stop();
-        webcam = null;
-      }
-
-      $('#albums').hide();
-      $('#divTraining').hide();
-      let txt = UI.getStats();
+      await stopTrainingAndWebcam();
+      let txt = UI.showStats();
       Voice.speak(txt);
       break;
+
     case 'surfing':
-      currentTraining = 'surfing';
-      $('#albums').hide();
-      $('#titleH1').hide();
-      $('#divTraining').show();
-      $('#divCanvasCam').show();
-      $('#divStats').hide();
-      $('#lblCounter').show();
-      $('#imgYoga').hide();
-      document.querySelector('#lblPosture').textContent = '';
-      initPose();
+    case 'gym':
+      currentTraining = page;
+      UI.showSurfOrGym();
+      initPoseAndWebcam();
       break;
 
     case 'yoga':
       currentTraining = 'yoga';
-      $('#albums').hide();
-      $('#titleH1').hide();
-      $('#divTraining').show();
-      $('#divCanvasCam').show();
-      $('#divStats').hide();
-      $('#lblCounter').hide();
-      $('#imgYoga').show();
-      document.querySelector('#lblPosture').textContent = 'Try to repeat the Tree figure';
-      initPose();
+      UI.showYoga();
+      initPoseAndWebcam();
       break;
 
-    case 'gym':
-      currentTraining = 'gym';
-      $('#albums').hide();
-      $('#titleH1').hide();
-      $('#divTraining').show();
-      $('#divCanvasCam').show();
-      $('#divStats').hide();
-      $('#lblCounter').show();
-      $('#imgYoga').hide();
-      document.querySelector('#lblPosture').textContent = '';
-      initPose();
-      break;
     case 'home':
-      if (currentTraining && webcam) {
-        currentTraining = null;
-        await webcam.stop();
-        webcam = null;
-      }
-
-      $('#divTraining').hide();
-      $('#albums').show();
-      $('#titleH1').show();
-      $('#divStats').hide();
-
+      await stopTrainingAndWebcam();
       await init();
-      //$('#helpModal').hide();
       break;
   }
 }
 
-function updateStatsGym(num) {
-  var cont = localStorage.getItem("total_gym");
-  if (!cont) cont = '0';
-  localStorage.setItem("total_gym", parseInt(cont) + num);
+async function stopTrainingAndWebcam() {
+  currentTraining = null;
+  if (webcam) {
+    await webcam.stop();
+    webcam = null;
+  }
 }
-function updateStatsSurfing(num) {
-  var cont = localStorage.getItem("total_surfing");
+
+function updateStatsCurrentTraining(num) {
+  var cont = localStorage.getItem('total_' + currentTraining);
   if (!cont) cont = '0';
-  localStorage.setItem("total_surfing", parseInt(cont) + num);
-}
-function updateStatsYoga(num) {
-  var cont = localStorage.getItem("total_yoga");
-  if (!cont) cont = '0';
-  localStorage.setItem("total_yoga", parseInt(cont) + num);
+  localStorage.setItem('total_' + currentTraining, parseInt(cont) + num);
 }
 
 // pose methods:
 
-async function initPose() {
-
+async function initPoseAndWebcam() {
   UI.cameraLoading();
 
   const modelURL = Settings.URL_POSE_MODEL + 'model.json';
@@ -271,42 +236,34 @@ async function initPose() {
   // load the model and metadata
   // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
   // Note: the pose library adds a tmPose object to your window (window.tmPose)
-  pose_model = await tmPose.load(modelURL, metadataURL);
+  poseModel = await tmPose.load(modelURL, metadataURL);
 
   // Convenience function to setup a webcam
-  const size_html = 600;
-  const size_model = 600;
-  webcam = new tmPose.Webcam(800, size_model, true); // width, height, flip
+  webcam = new tmPose.Webcam(Settings.WEBCAM_WIDTH, Settings.WEBCAM_HEIGHT, true); // w, h, flip
   await webcam.setup(); // request access to the webcam
   await webcam.play();
   window.requestAnimationFrame(loop);
 
   UI.cameraLoaded();
 
-  // append/get elements to the DOM
-  const canvas = document.getElementById("canvas");
-  canvas.width = 800;
-  canvas.height = size_html;
-  painter = new BodyPainter(canvas, Settings.MIN_PART_CONFIDENCE);
+  painter = new BodyPainter('canvas', Settings.WEBCAM_WIDTH,
+                            Settings.WEBCAM_HEIGHT, Settings.MIN_PART_CONFIDENCE);
 
   SimplePoseDetection.minPartConfidence = Settings.MIN_PART_CONFIDENCE;
-
-  painter.postureCounter = 0;
 }
 
 async function loop(timestamp) {
   if (webcam) {
     webcam.update(); // update the webcam frame
-    await predictPose();
+    await predictAndDrawPose();
     window.requestAnimationFrame(loop);
   }
 }
 
-async function predictPose() {
+async function predictAndDrawPose() {
   // Prediction #1: run input through posenet
   // estimatePose can take in an image, video or canvas html element
-  const { pose, posenetOutput } = await pose_model.estimatePose(webcam.canvas);
-  // Prediction 2: run input through teachable machine classification model
+  const { pose, posenetOutput } = await poseModel.estimatePose(webcam.canvas);
 
   manualPosePrediction(pose);
 
@@ -314,76 +271,53 @@ async function predictPose() {
 }
 
 function manualPosePrediction(pose) {
-  if (pose) {
-    if (currentTraining == 'surfing') {
-      if (currentPose != 'gymUp') {
-        if (SimplePoseDetection.isGymUp(pose)) {
-          document.querySelector('#lblPosture').textContent = 'Move your arms down';
-          SoundEffects.ding();
-          currentPose = 'gymUp';
-          incrementPostureCounter();
-
-          updateStatsSurfing(1);
-          motivationInProgress(painter.postureCounter);
-        }
-      } else if (currentPose != 'gymDown') {
-        if (SimplePoseDetection.isGymDown(pose)) {
-          document.querySelector('#lblPosture').textContent = 'Move your arms up';
-          SoundEffects.ding();
-          currentPose = 'gymDown';
-          incrementPostureCounter();
-
-          updateStatsSurfing(1);
-          motivationInProgress(painter.postureCounter);
-        }
-      }
-    } else if (currentTraining == 'gym') {
-      if (currentPose != 'liftweightsUp') {
-        if (SimplePoseDetection.isWeightsUp(pose)) {
-          document.querySelector('#lblPosture').textContent = 'Move the weights down';
-          SoundEffects.ding();
-          currentPose = 'liftweightsUp';
-          incrementPostureCounter();
-
-          updateStatsGym(1);
-          motivationInProgress(painter.postureCounter);
-        }
-      } else if (currentPose != 'liftweightsDown') {
-        if (SimplePoseDetection.isWeightsDown(pose)) {
-          document.querySelector('#lblPosture').textContent = 'Move the weights up';
-          SoundEffects.ding();
-          currentPose = 'liftweightsDown';
-          incrementPostureCounter();
-
-          updateStatsGym(1);
-          motivationInProgress(painter.postureCounter);
-        }
-      }
-    } else if (currentTraining == 'yoga') {
-      if (SimplePoseDetection.isTreeFigure(pose)) {
-        SoundEffects.applause();
-        updateStatsYoga(1);
-        goTo('stats');
-      }
+  if (!pose) {
+    return;
+  }
+  if (currentTraining == 'surfing') {
+    if (currentPose != 'gymUp' && SimplePoseDetection.isGymUp(pose)) {
+      poseDetectedHandler('gymUp', 'Move your arms down');
+    } else if (currentPose != 'gymDown' && SimplePoseDetection.isGymDown(pose)) {
+      poseDetectedHandler('gymDown', 'Move your arms up');
     }
+  } else if (currentTraining == 'gym') {
+    if (currentPose != 'liftweightsUp' && SimplePoseDetection.isWeightsUp(pose)) {
+      poseDetectedHandler('liftweightsUp', 'Move the weights down');
+    } else if (currentPose != 'liftweightsDown' && SimplePoseDetection.isWeightsDown(pose)) {
+      poseDetectedHandler('liftweightsDown', 'Move the weights up');
+    }
+  } else if (currentTraining == 'yoga' && SimplePoseDetection.isTreeFigure(pose)) {
+    SoundEffects.applause();
+    updateStatsCurrentTraining(1);
+    goTo('stats');
   }
 }
 
-function incrementPostureCounter() {
-  painter.postureCounter += 1;
-  document.querySelector('#lblCounter').textContent = painter.postureCounter;
-}
+function poseDetectedHandler(newPose, message) {
+  SoundEffects.ding();
+  currentPose = newPose;
 
-function motivationInProgress(counter) {
-  if (counter == 10) {
-    if (!VoiceClone.currentAudioVoice) Voice.speak('Perfect, you are improving your six pack. Look it! Continues until 20 repetitions.');
-    else speakWithAudioVoice('perfect');
-  } else if (counter == 5 || counter == 15) {
-    if (!VoiceClone.currentAudioVoice) Voice.speak('cheer up!');
-    else speakWithAudioVoice('cheerup');
-  } else if (counter == 20) {
+  painter.postureCounter += 1;
+
+  updateStatsCurrentTraining(1);
+
+  motivationInProgress();
+
+  UI.updateTextTraining(message, painter.postureCounter);
+
+  if (painter.isExerciseCompleted()) {
     SoundEffects.applause();
     goTo('stats');
+  }
+}
+
+function motivationInProgress() {
+  if (painter.isSixPackUnlocked()) {
+    if (!VoiceClone.currentAudioVoice) Voice.speak('Perfect, you are improving your six pack. Look it! Continues until 20 repetitions.');
+    else speakWithAudioVoice('perfect');
+  } else if (painter.isPartialGoal()) {
+    if (!VoiceClone.currentAudioVoice) Voice.speak('cheer up!');
+    else speakWithAudioVoice('cheerup');
   }
 }
 
