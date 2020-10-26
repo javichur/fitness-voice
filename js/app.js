@@ -128,7 +128,7 @@ function witIntentHandlerHelp() {
 
 function witIntentHandlerGoHome() {
   if (!VoiceClone.currentAudioVoice) Voice.speak('Ok, going back to the home.');
-  else speakWithAudioVoice('home');
+  else VoiceClone.speakWithAudioVoice('home');
   goTo('home');
 }
 
@@ -314,10 +314,10 @@ function poseDetectedHandler(newPose, message) {
 function motivationInProgress() {
   if (painter.isSixPackUnlocked()) {
     if (!VoiceClone.currentAudioVoice) Voice.speak('Perfect, you are improving your six pack. Look it! Continues until 20 repetitions.');
-    else speakWithAudioVoice('perfect');
+    else VoiceClone.speakWithAudioVoice('perfect');
   } else if (painter.isPartialGoal()) {
     if (!VoiceClone.currentAudioVoice) Voice.speak('cheer up!');
-    else speakWithAudioVoice('cheerup');
+    else VoiceClone.speakWithAudioVoice('cheerup');
   }
 }
 
