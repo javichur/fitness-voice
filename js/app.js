@@ -78,10 +78,6 @@ function witRequest(message) {
   }
 }
 
-function isWitNotUndertand(result) {
-  return !result || !result.intents || !result.intents[0] || result.intents[0].confidence < Settings.WIT_ACCURACY;
-}
-
 function witResponseHander(result) {
   if (isWitNotUndertand(result)) {
     Voice.speak('I\'m sorry, I can\'t understand. Repeat please.');
@@ -112,6 +108,10 @@ function witResponseHander(result) {
       // TODO
       break;
   }
+}
+
+function isWitNotUndertand(result) {
+  return !result || !result.intents || !result.intents[0] || result.intents[0].confidence < Settings.WIT_ACCURACY;
 }
 
 function witIntentHandlerLetsGo() {
